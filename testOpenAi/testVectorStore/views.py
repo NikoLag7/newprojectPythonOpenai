@@ -9,10 +9,10 @@ from rest_framework.views import APIView
 from rest_framework import status
 from django.utils import timezone
 from openai import OpenAI
-from decouple import config
+#from decouple import config
 
 
-load_dotenv()
+#load_dotenv()
 
 class DocumentUploadView(APIView):
     def post(self, request, *args, **kwargs):
