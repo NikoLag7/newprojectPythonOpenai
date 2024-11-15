@@ -2,7 +2,7 @@
 
 # Create your views here.
 import os
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
