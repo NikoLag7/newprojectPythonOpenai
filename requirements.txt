@@ -4,3 +4,4 @@ sqlparse==0.5.1
 tzdata==2024.2
 openai==1.54.4
 djangorestframework
+gunicorn==20.0.4
