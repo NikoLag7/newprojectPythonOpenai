@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-xeu%u%*21)hb5ada6(78dzj*k9062eyx9&#!@inicvcc_-jk&@
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["newprojectpythonopenai.onrender.com"]
 
 
 # Application definition
