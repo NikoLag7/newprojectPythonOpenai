@@ -1,16 +1,11 @@
 # Create your views here.
 import os
-#from dotenv import load_dotenv
 from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from django.utils import timezone
 from openai import OpenAI
-#from decouple import config
-
-
-#load_dotenv()
 
 class DocumentUploadView(APIView):
     def post(self, request, *args, **kwargs):
@@ -32,11 +27,9 @@ class DocumentUploadView(APIView):
             for chunk in file.chunks():
                 destination.write(chunk)
 
-        OPENAI_API_KEY = config('OPENAI_API_KEY', default='clave-defecto')
 
         client = OpenAI()
-        
-        print(OPENAI_API_KEY)
+
         assistant = client.beta.assistants.create(
         name="Software developer expert",
         instructions="You are expert in develop tecnology.",
