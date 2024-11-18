@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+  YustiiAI_app:
+    build: .
+    volumes:
+      - static:/code/static
+      - .:/code
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+  nginx:
+    image: nginx:1.13
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx/conf.d:/etc/nginx/conf.d
+      - static:/code/static
+    depends_on:
+      - YustiiAI_app
+
+volumes:
+  .:
+  static:
+#docker system df
+#docker system prune
+#docker exec -t -i IDDOCKER /bin/bash
