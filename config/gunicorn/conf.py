@@ -1,4 +1,4 @@
-name = 'testOpenAI'
+name = 'testOpenAi'
 loglevel = 'info'
 errorlog = 'error'
 acceslog = '-'
