@@ -1,67 +1,105 @@
 # Create your views here.
 import os
+import tempfile
+
 from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from django.utils import timezone
 from openai import OpenAI
+from rest_framework.permissions import IsAuthenticated
+import requests
+from urllib.parse import urlsplit, unquote
+
 
 class DocumentUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
         # Check if a file was uploaded
-        file = request.FILES.get('file')
-        if not file:
-            return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+        data = request.data
+        try:
+            if data and "files" in data and "vector_store_id" in data and "assistant_id" in data:
+                file_paths = []
+                files = data["files"]
+                assistant_id = data["assistant_id"]
+                vector_store_id = data["vector_store_id"]
+                print(type(files))
+                if type(files) == list:
+                    for file in files:
+                        file_to_upload = requests.get(url=file)
+                        if file_to_upload.status_code == 200:
+                            file_name_original = ""
+                            if 'Content-Disposition' in file_to_upload.headers:
+                                content_disposition = file_to_upload.headers['Content-Disposition']
+                                # file_name_original = content_disposition
+                            else:
+                                filename = os.path.basename(urlsplit(file).path)
+                                file_name_original = unquote(filename)
+                            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                                # Escribe el contenido del archivo descargado en el archivo temporal
+                                temp_file.write(file_to_upload.content)
 
-        # Define the directory where files will be saved
-        upload_dir = os.path.join(settings.MEDIA_ROOT, 'uploads')
-        os.makedirs(upload_dir, exist_ok=True)
+                                temp_file_name = temp_file.name
 
-        # Define a unique file name based on the current timestamp
-        file_name = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{file.name}"
-        file_path = os.path.join(upload_dir, file_name)
+                                filename = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{file_name_original}"
+                            os.rename(temp_file_name, filename)
+                            file_paths.append(filename)
 
-        # Save the file to the file system
-        with open(file_path, 'wb+') as destination:
-            for chunk in file.chunks():
-                destination.write(chunk)
+                elif type(files) == str:
+                    file_to_upload = requests.get(url=files)
+                    if file_to_upload.status_code == 200:
+                        file_name_original = ""
+                        if 'Content-Disposition' in file_to_upload.headers:
+                            content_disposition = file_to_upload.headers['Content-Disposition']
+                            # file_name_original = content_disposition
+                        else:
+                            filename = os.path.basename(urlsplit(files).path)
+                            file_name_original = unquote(filename)
+                        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                            # Escribe el contenido del archivo descargado en el archivo temporal
+                            temp_file.write(file_to_upload.content)
 
+                            temp_file_name = temp_file.name
 
-        client = OpenAI()
+                            filename = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{file_name_original}"
+                        os.rename(temp_file_name, filename)
+                        file_paths.append(filename)
+                            # Define a unique file name based on the current timestamp
 
-        assistant = client.beta.assistants.create(
-        name="Software developer expert",
-        instructions="You are expert in develop tecnology.",
-        model="gpt-4o-mini",
-        tools=[{"type": "file_search"}],
-        )
+                client = OpenAI()
+                if not vector_store_id:
+                    if "case_name" in data:
+                        vector_store = client.beta.vector_stores.create(name=data["case_name"]+"Vector_store")
+                        vector_store_id = vector_store.id
+                    else:
+                        return Response({"message": "case_name parameter not found"}, status=status.HTTP_400_BAD_REQUEST)
 
+                file_streams = [open(path, "rb") for path in file_paths]
 
+                file_batch = client.beta.vector_stores.file_batches.upload_and_poll(
+                vector_store_id=vector_store_id, files=file_streams
+                )
 
-        vector_store = client.beta.vector_stores.create(name="FFF")
+                assistant = client.beta.assistants.update(
+                assistant_id=assistant_id,
+                tool_resources={"file_search": {"vector_store_ids": [vector_store_id]}},
+                )
+                print(assistant)
+                for fileStream in file_streams:
+                    fileStream.close()
+                for file in file_paths:
+                    os.remove(file)
+                return Response({"message": "File/s uploaded successfully!"}, status=status.HTTP_201_CREATED)
 
-        file_paths = [file_path]
-        file_streams = [open(path, "rb") for path in file_paths]
+            else:
+                return Response({"message": "Not enough parameters found"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            return Response({"message": "Unexpected error: "+str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def get(self, request, *args, **kwargs):
 
-
-
-        file_batch = client.beta.vector_stores.file_batches.upload_and_poll(
-        vector_store_id=vector_store.id, files=file_streams
-        )
-
-        print(file_batch.status)
-        print(file_batch.file_counts)
-
-
-        assistant = client.beta.assistants.update(
-        assistant_id=assistant.id,
-        tool_resources={"file_search": {"vector_store_ids": [vector_store.id]}},
-        )
-
-        print(assistant)    
-
-        return Response({"message": "File uploaded successfully!", "file_path": file_path}, status=status.HTTP_201_CREATED)
+        return Response({"message": "Request excecuted correctly"}, status=status.HTTP_201_CREATED)
     
 
