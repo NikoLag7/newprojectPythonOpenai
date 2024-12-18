@@ -37,15 +37,18 @@ class DocumentUploadView(APIView):
                             else:
                                 filename = os.path.basename(urlsplit(file).path)
                                 file_name_original = unquote(filename)
-                            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                                # Escribe el contenido del archivo descargado en el archivo temporal
-                                temp_file.write(file_to_upload.content)
-
-                                temp_file_name = temp_file.name
-
-                                filename = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{file_name_original}"
-                            os.rename(temp_file_name, filename)
-                            file_paths.append(filename)
+                                file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{file_name_original}"
+                            # with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                            #     # Escribe el contenido del archivo descargado en el archivo temporal
+                            #     temp_file.write(file_to_upload.content)
+                            #
+                            #     temp_file_name = temp_file.name
+                            #
+                            #     filename = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{file_name_original}"
+                            # os.rename(temp_file_name, filename)
+                            with open(file_name_original, 'wb+') as destination:
+                                destination.write(file_to_upload.content)
+                            file_paths.append(file_name_original)
 
                 elif type(files) == str:
                     file_to_upload = requests.get(url=files)
@@ -57,15 +60,18 @@ class DocumentUploadView(APIView):
                         else:
                             filename = os.path.basename(urlsplit(files).path)
                             file_name_original = unquote(filename)
-                        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                            # Escribe el contenido del archivo descargado en el archivo temporal
-                            temp_file.write(file_to_upload.content)
-
-                            temp_file_name = temp_file.name
-
-                            filename = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{file_name_original}"
-                        os.rename(temp_file_name, filename)
-                        file_paths.append(filename)
+                            file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{file_name_original}"
+                        # with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                        #     # Escribe el contenido del archivo descargado en el archivo temporal
+                        #     temp_file.write(file_to_upload.content)
+                        #
+                        #     temp_file_name = temp_file.name
+                        #
+                        #     filename = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{file_name_original}"
+                        # os.rename(temp_file_name, filename)
+                        with open(file_name_original, 'wb+') as destination:
+                            destination.write(file_to_upload.content)
+                        file_paths.append(file_name_original)
                             # Define a unique file name based on the current timestamp
 
                 client = OpenAI()
