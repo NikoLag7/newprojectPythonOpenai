@@ -13,4 +13,5 @@ class Company():
                 return "ERROR BY COMPANY DUPLICATED"
         return company
 
-    
+    def create_company(self, id_assistant, id_vectore_store):
+        pass
