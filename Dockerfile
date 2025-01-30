@@ -11,6 +11,7 @@ RUN apt-get update && apt-get -y install ghostscript
 RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
 RUN pip install deep_translator
 RUN pip install -r ./requirements.txt
+RUN apt-get install python3-bs4
 
 COPY ./entrypoint.sh /
 ENTRYPOINT ["sh", "/entrypoint.sh"]

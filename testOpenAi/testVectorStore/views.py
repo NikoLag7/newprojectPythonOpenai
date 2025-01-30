@@ -1,8 +1,7 @@
 # Create your views here.
 import os
-import tempfile
-
-from django.conf import settings
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, urlparse
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -164,8 +163,22 @@ class TermsAndPrivacityReadingView(APIView):
                     company_obj = company.get_company(id_company)
 
                 if company_obj:
-                    first_prompt_assistant = enviar_mensaje_asistente(company_obj.id_assistant, "Listame todos los posibles enlaces dentro de la pagina : "+ URL_pages+ "Ignora los documentos almacenados y relaiza la busqueda directa a la página", client)
-                    print(first_prompt_assistant)
+
+                    urls_internas = extract_internal_links(URL_pages)
+                    list_respuestas_page = []
+                    for url in urls_internas:
+                        headers = {
+                            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+                        url_response_content = requests.get(url, headers=headers)
+                        if url_response_content.status_code == 200:
+                            soup = BeautifulSoup(url_response_content.text, "html.parser")
+                            paragraphs = soup.find_all("p")
+                            content = " ".join([p.get_text() for p in paragraphs])
+                            mensaje_prompt = "Usando  el documento de terminos y condiciones busca posibles riesgos, contradicciones o vacios legales dentro del siguiente texto: {0}. ".format(content)
+                            respuesta_gpt = enviar_mensaje_asistente(company_obj.id_assistant,mensaje_prompt, client)
+                            map_analisis = {"URL": url, "Contenido pagina": content, "respuesta": respuesta_gpt }
+                            list_respuestas_page.append(map_analisis)
+                    return Response(list_respuestas_page, status=status.HTTP_200_OK)
 
             return Response({"message": "Updated file"}, status=status.HTTP_200_OK)
 
@@ -177,6 +190,27 @@ class TermsAndPrivacityReadingView(APIView):
 
         return Response({"message": "Request excecuted correctly"}, status=status.HTTP_200_OK)
 
+
+def extract_internal_links(url):
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+
+        response = requests.get(url,headers=headers)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        base_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+
+        internal_links = set()
+        for link in soup.find_all("a", href=True):
+            absolute_link = urljoin(base_url, link["href"])
+            if absolute_link.startswith(base_url) and "terminos" not in absolute_link and "privaci" not in absolute_link:
+                internal_links.add(absolute_link)
+
+        return list(internal_links)
+    except requests.RequestException as e:
+        return {"error": str(e)}
 
 def enviar_mensaje_asistente(assistant_id, mensaje, client):
     """
@@ -220,3 +254,5 @@ def enviar_mensaje_asistente(assistant_id, mensaje, client):
 
     except Exception as e:
         return f"Error: {str(e)}"
+
+
