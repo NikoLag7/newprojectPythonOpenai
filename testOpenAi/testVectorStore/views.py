@@ -191,8 +191,7 @@ class TermsAndPrivacityReadingView(APIView):
                         vector_store_id=company_obj.id_vector_store, files=file_streams)
                     for fileStream in file_streams:
                         fileStream.close()
-                    for file in file_paths:
-                        os.remove(file)
+                    os.remove(filename_content)
                     print("Enviando respuesta")
                     terminos_prompt = "Compara los archivos de terminos y condiciones contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
                     terminos_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,terminos_prompt, client)
