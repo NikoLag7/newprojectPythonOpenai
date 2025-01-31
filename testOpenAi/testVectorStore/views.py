@@ -115,15 +115,15 @@ class TermsAndPrivacityReadingView(APIView):
                 URL_pages = data["URL"]
                 company_obj = None
                 extensiones_imagen = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']
+                company_name = data["company_name"]
                 company = CompanyClass()
                 client = OpenAI()
                 if "company_id" not in data:
-                    company_name = data["company_name"]
                     my_assistant = client.beta.assistants.create(
                         instructions="""Te desempeñas en un ambito legal. Eres un asistente de recolección y comparación de textos, con el fin de encontrar disparidades entre ambos textos.""",
                         name="Y-CORRECTOR AI-"+company_name,
                         tools=[{"type": "code_interpreter"}, {"type": "file_search"}],
-                        model="gpt-4o",
+                        model="gpt-4o-mini",
                     )
                     assistant_id = my_assistant.id
                     vector_store = client.beta.vector_stores.create(name="Y-CORRECTOR AI-" + company_name + "Vector_store")
@@ -166,6 +166,7 @@ class TermsAndPrivacityReadingView(APIView):
 
                     urls_internas = extract_internal_links(URL_pages)
                     list_respuestas_page = []
+                    contentTXT = "\t\t Contenido de todas las paginas \t\t \n\n"
                     for url in urls_internas:
                         headers = {
                             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
@@ -174,11 +175,29 @@ class TermsAndPrivacityReadingView(APIView):
                             soup = BeautifulSoup(url_response_content.text, "html.parser")
                             paragraphs = soup.find_all("p")
                             content = " ".join([p.get_text() for p in paragraphs])
-                            mensaje_prompt = "Usando  el documento de terminos y condiciones busca posibles riesgos, contradicciones o vacios legales dentro del siguiente texto: {0}. ".format(content)
-                            respuesta_gpt = enviar_mensaje_asistente(company_obj.id_assistant,mensaje_prompt, client)
-                            map_analisis = {"URL": url, "Contenido pagina": content, "respuesta": respuesta_gpt }
-                            list_respuestas_page.append(map_analisis)
-                    return Response(list_respuestas_page, status=status.HTTP_200_OK)
+                            contentTXT = contentTXT + "URL: {0} \n Content: {1} \n\n".format(url, content)
+
+                            # mensaje_prompt = "Usando  el documento de terminos y condiciones busca posibles riesgos, contradicciones o vacios legales dentro del siguiente texto: {0}. ".format(content)
+                            # respuesta_gpt = enviar_mensaje_asistente(company_obj.id_assistant,mensaje_prompt, client)
+                            # map_analisis = {"URL": url, "Contenido pagina": content, "respuesta": respuesta_gpt }
+                            # list_respuestas_page.append(map_analisis)
+                    filename_content = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{company_name}_pageContents.txt"
+                    with open(filename_content, "w", encoding="utf-8") as file:
+                        file.write(contentTXT)
+                    file_streams = [open(filename_content, "rb")]
+
+                    file_batch = client.beta.vector_stores.file_batches.upload_and_poll(
+                        vector_store_id=company_obj.id_vector_store, files=file_streams)
+                    for fileStream in file_streams:
+                        fileStream.close()
+                    for file in file_paths:
+                        os.remove(file)
+                    terminos_prompt = "Compara los archivos de terminos y condiciones contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
+                    terminos_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,terminos_prompt, client)
+                    privacity_prompt = "Compara los archivos de politica de privacidad contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
+                    privacity_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,privacity_prompt, client)
+
+                    return Response({"respuesta_privacidad": privacity_respuesta,"terminos_respuesta": terminos_respuesta, "id_assistant": company_obj.id_company}, status=status.HTTP_200_OK)
 
             return Response({"message": "Updated file"}, status=status.HTTP_200_OK)
 
