@@ -167,7 +167,7 @@ class TermsAndPrivacityReadingView(APIView):
                     urls_internas = extract_internal_links(URL_pages)
                     list_respuestas_page = []
                     contentTXT = "\t\t Contenido de todas las paginas \t\t \n\n"
-                    for url in urls_internas:
+                    for url in urls_internas[:3]:
                         headers = {
                             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
                         url_response_content = requests.get(url, headers=headers)
@@ -198,7 +198,7 @@ class TermsAndPrivacityReadingView(APIView):
                     privacity_prompt = "Compara los archivos de politica de privacidad contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
                     privacity_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,privacity_prompt, client)
 
-                    return Response({"respuesta_privacidad": privacity_respuesta,"terminos_respuesta": terminos_respuesta, "id_assistant": company_obj.id_company}, status=status.HTTP_200_OK)
+                    return Response({"respuesta_privacidad": privacity_respuesta,"terminos_respuesta": terminos_respuesta, "id_company": company_obj.id_company, "id_assistant": company_obj.id_company}, status=status.HTTP_200_OK)
 
             return Response({"message": "Not enough parameters"}, status=status.HTTP_400_BAD_REQUEST)
 
