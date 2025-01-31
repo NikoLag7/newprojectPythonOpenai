@@ -122,7 +122,7 @@ class TermsAndPrivacityReadingView(APIView):
                     my_assistant = client.beta.assistants.create(
                         instructions="""Te desempeñas en un ambito legal. Eres un asistente de recolección y comparación de textos, con el fin de encontrar disparidades entre ambos textos.""",
                         name="Y-CORRECTOR AI-"+company_name,
-                        tools=[{"type": "code_interpreter"}, {"type": "file_search"}],
+                        tools=[{"type": "file_search"}],
                         model="gpt-4o-mini",
                     )
                     assistant_id = my_assistant.id
@@ -137,13 +137,13 @@ class TermsAndPrivacityReadingView(APIView):
                             for chunk in file_terms.chunks():  # Escribir el archivo en partes
                               destination.write(chunk)
                         file_paths.append(file_name_original)
-                    if not privacity.name.rsplit(".")[-1] in extensiones_imagen:
-                        file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{privacity.name}"
-                        file_privacity = request.FILES.get('privacity')
-                        with open(file_name_original, 'wb+') as destination:
-                            for chunk in file_privacity.chunks():  # Escribir el archivo en partes
-                                destination.write(chunk)
-                        file_paths.append(file_name_original)
+                    # if not privacity.name.rsplit(".")[-1] in extensiones_imagen:
+                    #     file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{privacity.name}"
+                    #     file_privacity = request.FILES.get('privacity')
+                    #     with open(file_name_original, 'wb+') as destination:
+                    #         for chunk in file_privacity.chunks():  # Escribir el archivo en partes
+                    #             destination.write(chunk)
+                    #     file_paths.append(file_name_original)
                                 # Define a unique file name based on the current timestamp
                     file_streams = [open(path, "rb") for path in file_paths]
 
@@ -195,9 +195,9 @@ class TermsAndPrivacityReadingView(APIView):
                     print("Enviando respuesta")
                     terminos_prompt = "Compara los archivos de terminos y condiciones contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
                     terminos_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,terminos_prompt, client)
-                    privacity_prompt = "Compara los archivos de politica de privacidad contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
-                    privacity_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,privacity_prompt, client)
-
+                    # privacity_prompt = "Compara los archivos de politica de privacidad contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
+                    # privacity_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,privacity_prompt, client)
+                    privacity_respuesta = "Respuesta de borrador, en desarrollo :D"
                     return Response({"respuesta_privacidad": privacity_respuesta,"terminos_respuesta": terminos_respuesta, "id_company": company_obj.id_company, "id_assistant": company_obj.id_company}, status=status.HTTP_200_OK)
 
             return Response({"message": "Not enough parameters"}, status=status.HTTP_400_BAD_REQUEST)
