@@ -152,7 +152,7 @@ class TermsAndPrivacityReadingView(APIView):
                     assistant_id=company_obj.id_assistant,
                     tool_resources={"file_search": {"vector_store_ids": [company_obj.id_vector_store]}},
                     )
-                    print(assistant)
+                    print("ASISTENTE CREADO")
                     for fileStream in file_streams:
                         fileStream.close()
                     for file in file_paths:
@@ -163,7 +163,7 @@ class TermsAndPrivacityReadingView(APIView):
                     company_obj = company.get_company(id_company)
 
                 if company_obj:
-
+                    print("Procesando URLs")
                     urls_internas = extract_internal_links(URL_pages)
                     list_respuestas_page = []
                     contentTXT = "\t\t Contenido de todas las paginas \t\t \n\n"
@@ -182,6 +182,7 @@ class TermsAndPrivacityReadingView(APIView):
                             # map_analisis = {"URL": url, "Contenido pagina": content, "respuesta": respuesta_gpt }
                             # list_respuestas_page.append(map_analisis)
                     filename_content = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{company_name}_pageContents.txt"
+                    print("Procesando URLs")
                     with open(filename_content, "w", encoding="utf-8") as file:
                         file.write(contentTXT)
                     file_streams = [open(filename_content, "rb")]
@@ -192,6 +193,7 @@ class TermsAndPrivacityReadingView(APIView):
                         fileStream.close()
                     for file in file_paths:
                         os.remove(file)
+                    print("Enviando respuesta")
                     terminos_prompt = "Compara los archivos de terminos y condiciones contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
                     terminos_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,terminos_prompt, client)
                     privacity_prompt = "Compara los archivos de politica de privacidad contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
@@ -199,7 +201,7 @@ class TermsAndPrivacityReadingView(APIView):
 
                     return Response({"respuesta_privacidad": privacity_respuesta,"terminos_respuesta": terminos_respuesta, "id_assistant": company_obj.id_company}, status=status.HTTP_200_OK)
 
-            return Response({"message": "Updated file"}, status=status.HTTP_200_OK)
+            return Response({"message": "Not enough parameters"}, status=status.HTTP_400_BAD_REQUEST)
 
 
         except Exception as exc:
