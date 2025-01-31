@@ -108,66 +108,34 @@ class TermsAndPrivacityReadingView(APIView):
         # Check if a file was uploaded
         data = request.data
         try:
-            if data and "privacity" in data and "terms" in data and "URL" in data and "company_name" in data:
+            if data and "URL" in data and "company_name" in data:
                 file_paths = []
-                terms = data["terms"]
-                privacity = data["privacity"]
+                terms = None
+                privacity = None
+                if "privacity" in data and "terms" in data:
+                    terms = data["terms"]
+                    privacity = data["privacity"]
                 URL_pages = data["URL"]
                 company_obj = None
                 extensiones_imagen = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']
                 company_name = data["company_name"]
                 company = CompanyClass()
                 client = OpenAI()
+
                 if "company_id" not in data:
+
                     my_assistant = client.beta.assistants.create(
                         instructions="""Te desempeñas en un ambito legal. Eres un asistente de recolección y comparación de textos, con el fin de encontrar disparidades entre ambos textos.""",
-                        name="Y-CORRECTOR AI-"+company_name,
+                        name="Y-CORRECTOR AI-" + company_name,
                         tools=[{"type": "file_search"}],
                         model="gpt-4o-mini",
                     )
-                    assistant_id = my_assistant.id
-                    vector_store = client.beta.vector_stores.create(name="Y-CORRECTOR AI-" + company_name + "Vector_store")
-                    vector_store_id = vector_store.id
-                    company_obj=company.create_company(id_assistant=assistant_id, id_vector_store= vector_store_id,
-                                                       company_name=company_name)
-                    if not terms.name.rsplit(".")[-1] in extensiones_imagen:
-                        file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{terms.name}"
-                        file_terms = request.FILES.get('terms')
-                        with open(file_name_original, 'wb+') as destination:
-                            for chunk in file_terms.chunks():  # Escribir el archivo en partes
-                              destination.write(chunk)
-                        file_paths.append(file_name_original)
-                    # if not privacity.name.rsplit(".")[-1] in extensiones_imagen:
-                    #     file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{privacity.name}"
-                    #     file_privacity = request.FILES.get('privacity')
-                    #     with open(file_name_original, 'wb+') as destination:
-                    #         for chunk in file_privacity.chunks():  # Escribir el archivo en partes
-                    #             destination.write(chunk)
-                    #     file_paths.append(file_name_original)
-                                # Define a unique file name based on the current timestamp
-                    file_streams = [open(path, "rb") for path in file_paths]
-
-                    file_batch = client.beta.vector_stores.file_batches.upload_and_poll(vector_store_id=company_obj.id_vector_store, files=file_streams)
-                    assistant = client.beta.assistants.update(
-                    assistant_id=company_obj.id_assistant,
-                    tool_resources={"file_search": {"vector_store_ids": [company_obj.id_vector_store]}},
-                    )
                     print("ASISTENTE CREADO")
-                    for fileStream in file_streams:
-                        fileStream.close()
-                    for file in file_paths:
-                        os.remove(file)
 
-                else:
-                    id_company = data["company_id"]
-                    company_obj = company.get_company(id_company)
-
-                if company_obj:
-                    print("Procesando URLs")
-                    urls_internas = extract_internal_links(URL_pages)
+                    urls_internas, terms, privacity = extract_internal_links(URL_pages)
                     list_respuestas_page = []
-                    contentTXT = "\t\t Contenido de todas las paginas \t\t \n\n"
-                    for url in urls_internas[:3]:
+                    contentTXT = "Contenido de todas las paginas\n\n"
+                    for url in urls_internas:
                         headers = {
                             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
                         url_response_content = requests.get(url, headers=headers)
@@ -177,27 +145,85 @@ class TermsAndPrivacityReadingView(APIView):
                             content = " ".join([p.get_text() for p in paragraphs])
                             contentTXT = contentTXT + "URL: {0} \n Content: {1} \n\n".format(url, content)
 
-                            # mensaje_prompt = "Usando  el documento de terminos y condiciones busca posibles riesgos, contradicciones o vacios legales dentro del siguiente texto: {0}. ".format(content)
-                            # respuesta_gpt = enviar_mensaje_asistente(company_obj.id_assistant,mensaje_prompt, client)
-                            # map_analisis = {"URL": url, "Contenido pagina": content, "respuesta": respuesta_gpt }
-                            # list_respuestas_page.append(map_analisis)
                     filename_content = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{company_name}_pageContents.txt"
-                    print("Procesando URLs")
                     with open(filename_content, "w", encoding="utf-8") as file:
                         file.write(contentTXT)
-                    file_streams = [open(filename_content, "rb")]
+                        file_paths.append(file)
 
+                    if type(terms) != "text" and not terms.name.rsplit(".")[-1] in extensiones_imagen:
+                        file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{terms.name}"
+                        file_terms = request.FILES.get('terms')
+                        with open(file_name_original, 'wb+') as destination:
+                            for chunk in file_terms.chunks():  # Escribir el archivo en partes
+                              destination.write(chunk)
+                        file_paths.append(file_name_original)
+                    elif terms is not None:
+                        headers = {
+                            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+                        url_response_content = requests.get(terms, headers=headers)
+                        if url_response_content.status_code == 200:
+                            soup = BeautifulSoup(url_response_content.text, "html.parser")
+                            paragraphs = soup.find_all("p")
+                            content = "Terminos y condiciones \n\n ".join([p.get_text() for p in paragraphs])
+                            filename_content = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{company_name}_Terms.txt"
+                            with open(filename_content, "w", encoding="utf-8") as file:
+                                file.write(content)
+                                file_paths.append(file)
+
+                    if type(privacity) != "text" and not privacity.name.rsplit(".")[-1] in extensiones_imagen:
+                        file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{privacity.name}"
+                        file_privacity = request.FILES.get('privacity')
+                        with open(file_name_original, 'wb+') as destination:
+                            for chunk in file_privacity.chunks():  # Escribir el archivo en partes
+                                destination.write(chunk)
+                        file_paths.append(file_name_original)
+                    elif privacity is not None:
+                        headers = {
+                            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+                        url_response_content = requests.get(terms, headers=headers)
+                        if url_response_content.status_code == 200:
+                            soup = BeautifulSoup(url_response_content.text, "html.parser")
+                            paragraphs = soup.find_all("p")
+                            content = "Politica de privacidad \n\n ".join([p.get_text() for p in paragraphs])
+                            filename_content = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{company_name}_Privacity.txt"
+                            with open(filename_content, "w", encoding="utf-8") as file:
+                                file.write(content)
+                                file_paths.append(file)
+
+                    print("URLS PROCESADAS")
+
+                    assistant_id = my_assistant.id
+                    vector_store = client.beta.vector_stores.create(
+                        name="Y-CORRECTOR AI-" + company_name + "Vector_store")
+                    vector_store_id = vector_store.id
+
+                    file_streams = [open(path, "rb") for path in file_paths]
                     file_batch = client.beta.vector_stores.file_batches.upload_and_poll(
-                        vector_store_id=company_obj.id_vector_store, files=file_streams)
+                        vector_store_id=vector_store_id, files=file_streams)
+                    assistant = client.beta.assistants.update(
+                        assistant_id=assistant_id,
+                        tool_resources={"file_search": {"vector_store_ids": [vector_store_id]}},
+                    )
+                    print("VECTOR STORE CREADO")
                     for fileStream in file_streams:
                         fileStream.close()
-                    os.remove(filename_content)
-                    print("Enviando respuesta")
+                    for file in file_paths:
+                        os.remove(file)
+
+                    company_obj = company.create_company(id_assistant=assistant_id, id_vector_store=vector_store_id,
+                                                         company_name=company_name)
+                    print("OBJETO ALMACENADO")
+                else:
+                    id_company = data["company_id"]
+                    company_obj = company.get_company(id_company)
+
+                if company_obj:
+
+                    print("ENVIANDO RESPUESTA")
                     terminos_prompt = "Compara los archivos de terminos y condiciones contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
                     terminos_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,terminos_prompt, client)
-                    # privacity_prompt = "Compara los archivos de politica de privacidad contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
-                    # privacity_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,privacity_prompt, client)
-                    privacity_respuesta = "Respuesta de borrador, en desarrollo :D"
+                    privacity_prompt = "Compara los archivos de politica de privacidad contra el archivo de contenidos de las paginas y lista las incongruencias y vacios legales que tengan"
+                    privacity_respuesta = enviar_mensaje_asistente(company_obj.id_assistant,privacity_prompt, client)
                     return Response({"respuesta_privacidad": privacity_respuesta,"terminos_respuesta": terminos_respuesta, "id_company": company_obj.id_company, "id_assistant": company_obj.id_company}, status=status.HTTP_200_OK)
 
             return Response({"message": "Not enough parameters"}, status=status.HTTP_400_BAD_REQUEST)
@@ -223,14 +249,21 @@ def extract_internal_links(url):
         base_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
 
         internal_links = set()
+        terms = None
+        privacity = None
         for link in soup.find_all("a", href=True):
             absolute_link = urljoin(base_url, link["href"])
             if absolute_link.startswith(base_url) and "terminos" not in absolute_link and "privaci" not in absolute_link:
                 internal_links.add(absolute_link)
+            if "terminos" not in absolute_link:
+                terms = absolute_link
 
-        return list(internal_links)
+            if "privaci" in absolute_link:
+                privacity = absolute_link
+
+        return list(internal_links), terms, privacity
     except requests.RequestException as e:
-        return {"error": str(e)}
+        return {"error": str(e)},None, None
 
 def enviar_mensaje_asistente(assistant_id, mensaje, client):
     """
