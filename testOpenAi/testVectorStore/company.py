@@ -14,7 +14,8 @@ class CompanyClass():
                 return "ERROR BY COMPANY DUPLICATED"
         return company
 
-    def create_company(self, id_assistant, id_vector_store, company_name):
-        company_new = Company(id_assistant=id_assistant, id_vector_store=id_vector_store, company_name=company_name)
+    def create_company(self, id_assistant, id_vector_store, company_name, obj_social):
+        company_new = Company(id_assistant=id_assistant, id_vector_store=id_vector_store, company_name=company_name,
+                              company_social_obj=obj_social)
         company_new.save()
         return company_new

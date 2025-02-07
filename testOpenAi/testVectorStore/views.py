@@ -212,7 +212,7 @@ class CreateNewEnterpriseAssistant(APIView):
                     os.remove(file)
 
                 company_obj = company.create_company(id_assistant=assistant_id, id_vector_store=vector_store_id,
-                                                     company_name=company_name)
+                                                     company_name=company_name, obj_social= clasificacion_enterprise)
                 print("OBJETO ALMACENADO")
 
                 return Response({"message": "New company created", "company_id": company_obj.id_company},
