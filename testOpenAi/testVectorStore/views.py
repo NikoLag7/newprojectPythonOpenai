@@ -149,16 +149,17 @@ class CreateNewEnterpriseAssistant(APIView):
                     file.write(contentTXT)
                     file_paths.append(file)
 
-                clasificacion_enterprise = enviar_mensaje_asistente(assistant_id, "Segun las normas colombianas define cual es el objeto social de la empresa segun el contenido de sus paginas descrito en el siguiente texto: " + contentTXT)
+                clasificacion_enterprise = enviar_mensaje_asistente(assistant_id, "Determina la propuesta de valor que tiene la empresa segun el suguiente texto: " + contentTXT,client)
                 print(clasificacion_enterprise)
 
-                if type(terms) != "text" and not terms.name.rsplit(".")[-1] in extensiones_imagen:
-                    file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{terms.name}"
-                    file_terms = request.FILES.get('terms')
-                    with open(file_name_original, 'wb+') as destination:
-                        for chunk in file_terms.chunks():  # Escribir el archivo en partes
-                          destination.write(chunk)
-                    file_paths.append(file_name_original)
+                if type(terms) != "text":
+                    if not terms.name.rsplit(".")[-1] in extensiones_imagen:
+                        file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{terms.name}"
+                        file_terms = request.FILES.get('terms')
+                        with open(file_name_original, 'wb+') as destination:
+                            for chunk in file_terms.chunks():  # Escribir el archivo en partes
+                              destination.write(chunk)
+                        file_paths.append(file_name_original)
                 elif terms is not None:
                     headers = {
                         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
@@ -172,13 +173,14 @@ class CreateNewEnterpriseAssistant(APIView):
                             file.write(content)
                             file_paths.append(file)
 
-                if type(privacity) != "text" and not privacity.name.rsplit(".")[-1] in extensiones_imagen:
-                    file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{privacity.name}"
-                    file_privacity = request.FILES.get('privacity')
-                    with open(file_name_original, 'wb+') as destination:
-                        for chunk in file_privacity.chunks():  # Escribir el archivo en partes
-                            destination.write(chunk)
-                    file_paths.append(file_name_original)
+                if type(privacity) != "text":
+                    if not privacity.name.rsplit(".")[-1] in extensiones_imagen:
+                        file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{privacity.name}"
+                        file_privacity = request.FILES.get('privacity')
+                        with open(file_name_original, 'wb+') as destination:
+                            for chunk in file_privacity.chunks():  # Escribir el archivo en partes
+                                destination.write(chunk)
+                        file_paths.append(file_name_original)
                 elif privacity is not None:
                     headers = {
                         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
@@ -279,10 +281,10 @@ def extract_internal_links(url):
             absolute_link = urljoin(base_url, link["href"])
             if absolute_link.startswith(base_url) and "terminos" not in absolute_link and "privaci" not in absolute_link:
                 internal_links.add(absolute_link)
-            if "terminos" not in absolute_link:
+            if "terminos" in absolute_link and not terms:
                 terms = absolute_link
 
-            if "privaci" in absolute_link:
+            if "privaci" in absolute_link and not privacity:
                 privacity = absolute_link
 
         return list(internal_links), terms, privacity
