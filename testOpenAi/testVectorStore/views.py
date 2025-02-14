@@ -147,12 +147,12 @@ class CreateNewEnterpriseAssistant(APIView):
                 filename_content = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{company_name}_pageContents.txt"
                 with open(filename_content, "w", encoding="utf-8") as file:
                     file.write(contentTXT)
-                    file_paths.append(file)
+                    file_paths.append(filename_content)
 
-                clasificacion_enterprise = enviar_mensaje_asistente(assistant_id, "Determina la propuesta de valor que tiene la empresa segun el suguiente texto: " + contentTXT,client)
+                clasificacion_enterprise = enviar_mensaje_asistente(assistant_id, "Determina y resume en menos de 5 palabras la propuesta de valor que tiene la empresa segun el suguiente texto: " + contentTXT,client)
                 print(clasificacion_enterprise)
 
-                if type(terms) != "text":
+                if type(terms) != str:
                     if not terms.name.rsplit(".")[-1] in extensiones_imagen:
                         file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{terms.name}"
                         file_terms = request.FILES.get('terms')
@@ -171,9 +171,9 @@ class CreateNewEnterpriseAssistant(APIView):
                         filename_content = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{company_name}_Terms.txt"
                         with open(filename_content, "w", encoding="utf-8") as file:
                             file.write(content)
-                            file_paths.append(file)
+                            file_paths.append(filename_content)
 
-                if type(privacity) != "text":
+                if type(privacity) != str:
                     if not privacity.name.rsplit(".")[-1] in extensiones_imagen:
                         file_name_original = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{privacity.name}"
                         file_privacity = request.FILES.get('privacity')
@@ -192,7 +192,7 @@ class CreateNewEnterpriseAssistant(APIView):
                         filename_content = f"{timezone.now().strftime('%Y%m%d%H%M%S')}_{company_name}_Privacity.txt"
                         with open(filename_content, "w", encoding="utf-8") as file:
                             file.write(content)
-                            file_paths.append(file)
+                            file_paths.append(filename_content)
 
                 print("URLS PROCESADAS")
 
